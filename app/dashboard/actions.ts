@@ -1,0 +1,5 @@
+"use server";
+import {revalidatePath} from "next/cache";import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";
+async function auth(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");return {s,user};}
+export async function addTask(fd:FormData){const {s,user}=await auth();const title=String(fd.get("title")||"").trim();const date=String(fd.get("study_date")||"");if(!title||!date)return;const {error}=await s.from("study_tasks").insert({user_id:user.id,title,study_date:date,start_time:fd.get("start_time")||null,end_time:fd.get("end_time")||null,status:"planned"});if(error)throw new Error(error.message);revalidatePath("/dashboard");}
+export async function finishTask(fd:FormData){const {s,user}=await auth();const {error}=await s.from("study_tasks").update({status:"completed"}).eq("id",String(fd.get("task_id"))).eq("user_id",user.id);if(error)throw new Error(error.message);revalidatePath("/dashboard");}
